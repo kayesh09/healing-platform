@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Healing Platform Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .status-badge {
+            background: #00d084;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .container { padding: 30px 40px; max-width: 1400px; margin: 0 auto; }
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .service-card {
+            background: #151b2d;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2a3550;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .service-name { font-size: 18px; font-weight: 600; color: #fff; }
+        .service-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-running { background: rgba(0, 208, 132, 0.2); color: #00d084; }
+        .status-degraded { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .status-circuit_broken { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        .status-deploying { background: rgba(33, 150, 243, 0.2); color: #2196f3; }
+        .service-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #8892b0;
+        }
+        .metric { display: flex; flex-direction: column; }
+        .metric-value { font-size: 20px; font-weight: 600; color: #fff; }
+        .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #2a3550;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d084, #00b8d4);
+            transition: width 0.3s;
+        }
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #2196f3; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-success { background: #00d084; color: white; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .logs-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .logs-content {
+            background: #1a1f3a;
+            padding: 20px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 900px;
+            max-height: 80vh;
+            overflow: auto;
+        }
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .logs-body {
+            background: #0d1117;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #7ee787;
+            white-space: pre-wrap;
+        }
+        .add-service {
+            background: #151b2d;
+            border: 2px dashed #2a3550;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .add-service:hover { border-color: #2196f3; background: #1a2340; }
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px;
+            color: #8892b0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Self-Healing Platform</h1>
+        <div class="status-badge">● System Healthy</div>
+    </div>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Services</h2>
+            <button class="btn btn-primary" onclick="showAddService()">+ Deploy Service</button>
+        </div>
+
+        <div class="services-grid" id="servicesGrid">
+            <div class="empty-state">
+                <p>No services deployed yet</p>
+                <p style="font-size: 13px; margin-top: 10px;">Deploy your first service to get started</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="logs-modal" id="logsModal">
+        <div class="logs-content">
+            <div class="logs-header">
+                <h3>Container Logs</h3>
+                <button class="btn btn-danger" onclick="closeLogs()">Close</button>
+            </div>
+            <div class="logs-body" id="logsBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'services_update') {
+                    updateServices(data.services);
+                }
+            };
+            ws.onclose = () => setTimeout(connectWebSocket, 1000);
+        }
+
+        function updateServices(services) {
+            const grid = document.getElementById('servicesGrid');
+            if (services.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <p>No services deployed yet</p>
+                        <p style="font-size: 13px; margin-top: 10px;">Deploy your first service to get started</p>
+                    </div>`;
+                return;
+            }
+
+            grid.innerHTML = services.map(s => `
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-name">${s.spec.name}</div>
+                        <div class="service-status status-${s.status}">${s.status}</div>
+                    </div>
+                    <div class="service-meta">
+                        <div class="metric">
+                            <span class="metric-value">${s.containers?.length || 0}/${s.spec.replicas}</span>
+                            <span class="metric-label">Replicas</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">${s.spec.image.split(':')[1] || 'latest'}</span>
+                            <span class="metric-label">Version</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">${s.restart_history?.length || 0}</span>
+                            <span class="metric-label">Restarts</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">${s.spec.port}</span>
+                            <span class="metric-label">Port</span>
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; color: #8892b0; margin-bottom: 10px;">
+                        CPU: ${s.spec.resources.cpu_limit} cores | Memory: ${s.spec.resources.memory_limit}
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-success" onclick="scaleService('${s.spec.name}', ${s.spec.replicas + 1})">Scale +</button>
+                        <button class="btn btn-primary" onclick="restartService('${s.spec.name}')">Restart</button>
+                        <button class="btn btn-danger" onclick="deleteService('${s.spec.name}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function scaleService(name, replicas) {
+            await fetch(`/api/services/${name}/scale`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({replicas})
+            });
+        }
+
+        async function restartService(name) {
+            await fetch(`/api/services/${name}/restart`, {method: 'POST'});
+        }
+
+        async function deleteService(name) {
+            if (confirm(`Delete service ${name}?`)) {
+                await fetch(`/api/services/${name}`, {method: 'DELETE'});
+            }
+        }
+
+        function showAddService() {
+            const name = prompt('Service name:');
+            const image = prompt('Docker image (e.g., nginx:latest):');
+            const port = prompt('Port:', '80');
+            const replicas = prompt('Replicas:', '1');
+
+            if (name && image) {
+                fetch('/api/services', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name, image, port: parseInt(port), replicas: parseInt(replicas)
+                    })
+                });
+            }
+        }
+
+        function closeLogs() {
+            document.getElementById('logsModal').style.display = 'none';
+        }
+
+        // Connect on load
+        connectWebSocket();
+    </script>
+</body>
+</html>
